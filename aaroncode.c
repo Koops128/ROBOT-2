@@ -23,12 +23,8 @@ void reverseRobot(int timeToReverse);
 void setMyTimer(int * theTimer, int millis);
 int resetMyTimer();
 
-/**
-* The main function that contains the driver code.
-*/
-task main()
-{
-    // The motor speed
+task wander() {
+		// The motor speed
     int motorLeftSpeed, motorRightSpeed;
 
     // The time when the robot will change directions
@@ -37,27 +33,26 @@ task main()
     // Choose a random direction to move.
     if(random(1))
         {
+        		//set the motor speed values to turn left
             moveLeft(&motorLeftSpeed, &motorRightSpeed);
         }
         else
         {
+        		//set the motor speed values to turn right
             moveRight(&motorLeftSpeed, &motorRightSpeed);
         }
 
-    // Have a counter for left/right movement. Negative for left and pos for right.
+    //Have a counter for left/right movement. Negative for left and pos for right.
     int moveCounter = 0;
-    do {
+    while(1) {
         // Get the time in milli when the left/right bumpers are hit.
 
-        //{
-            // Nothing is touched
             // Give motor left/right a random speed
             // Make robot walk forward.
             setMotorSpeed(motorLeft, motorLeftSpeed);
             setMotorSpeed(motorRight, motorRightSpeed);
-        //}
 
-        // If it is time to reset the direction
+        // If it is time, reset the direction
         if (time1[T2] > timeToReset)
         {
             // Get a new time.
@@ -98,7 +93,19 @@ task main()
         //Loop to monitor value in Sensor debugger window
         sleep(50);
 
-    } while (1);
+    }
+}
+
+/**
+* The main function that contains the driver code.
+*/
+task main()
+{
+    startTask(wander);
+
+    while(1) {
+
+  	}
 }
 
 /**
