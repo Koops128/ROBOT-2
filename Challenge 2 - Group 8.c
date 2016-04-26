@@ -16,7 +16,10 @@
 #define MAX_TURNS 2
 
 
-int threshold;
+int blackCal;
+int whiteCal;
+int leftColorAvg;
+int rightColorAvg;
 
 /**
 * Move the robot to the left.
@@ -104,22 +107,28 @@ void followLine(bool left, bool right) {
 	   //setMotorSpeed(motorRight, 20);
 	   bool online = true;
 		 while (online) {
+			int currLeftRead = 	leftColorAvg;
+			int currRightRead = 	rightColorAvg;
+
 		   setMotorSpeed(motorLeft, 20);
 		   setMotorSpeed(motorRight, 20);
 
-		   if (left) {
-			    while (getColorReflected(colorRight) < threshold) {
-			    	setMotorSpeed(motorLeft, 35);
-			   		setMotorSpeed(motorRight, -10);
+		   //if (online) {//left is on black
+			    while (left ? (blackCal + 5 <= currLeftRead) : (blackCal + 5 >= currRightRead)) {	//while left sees white (and right)
+						currLeftRead = 	leftColorAvg;
+						currRightRead = 	rightColorAvg;
+			    	setMotorSpeed(motorRight, 35);		//turn to the left
+			   		setMotorSpeed(motorLeft, 5);
+			    	// Move until left color sensor does not see white anymore
+			   	}
+					while (left ? (blackCal + 5 >= currRightRead) : (blackCal + 5 <= currLeftRead)) {	//while right sees black
+						currLeftRead = 	leftColorAvg;
+						currRightRead = 	rightColorAvg;
+			    	setMotorSpeed(motorLeft, 35);	//turn to the right
+			   		setMotorSpeed(motorRight, 5);
 			    	// Move until right color sensor does not see black anymore
 			   	}
-					while (getColorReflected(colorLeft) > threshold) {
-			    	setMotorSpeed(motorRight, 35);
-			   		setMotorSpeed(motorLeft, -10);
-			    	// Move until right color sensor does not see black anymore
-			   	}
-
-			 }
+			 //}
 		}
 }
 
@@ -200,24 +209,56 @@ task detectLine() {
 	bool leftDetect = false;
 	bool rightDetect = false;
 	while (1) {
+			int currLeftRead = 	leftColorAvg;
+			int currRightRead = 	rightColorAvg;
+
 		//if (SensorValue[colorLeft] == 1) { //black = 1
-		if (getColorReflected(colorLeft) < threshold) { //black = 1
+		if ((blackCal - 5 <= currLeftRead) &&  (currLeftRead <= blackCal + 5)) { //black = 1
 		   //online = true;
-		   leftDetect = true;
-	     setLEDColor(ledOrange);
-	     stopTask(wander);
-		} else if (getColorReflected(colorRight) < threshold) { //black = 1
-		   rightDetect = true;
-		   setLEDColor(ledOrange);
-		   stopTask(wander);
+			 sleep(500);
+			 if ((blackCal - 5 <= currLeftRead) &&  (currLeftRead <= blackCal + 5)) {
+		   	leftDetect = true;
+	     	setLEDColor(ledOrange);
+	     	stopTask(wander);
+	    }
+		} else if ((blackCal - 5 <= currRightRead) &&  (currRightRead <= blackCal + 5)) { //black = 1
+		   sleep(500);
+		   if ((blackCal - 5 <= currRightRead) &&  (currRightRead <= blackCal + 5)) { //black = 1
+				rightDetect = true;
+		   	setLEDColor(ledOrange);
+		   	stopTask(wander);
+		  }
 		}
 		if (leftDetect || rightDetect) {
-			 displayCenteredBigTextLine(4, "L:%d || R:%d", getColorReflected(colorLeft), getColorReflected(colorRight));
-	     sleep(1000);
+			 displayCenteredBigTextLine(4, "L:%d || R:%d", leftColorAvg, rightColorAvg);
+	     //sleep(1000);
 	     setLEDColor(ledGreen);
 	     followLine(leftDetect, rightDetect);
 	     setLEDColor(ledRed);
 		}
+	}
+}
+
+task calculateColors() {
+
+	leftColorAvg = 0;
+	rightColorAvg = 0;
+
+	int i = 0;
+	for (i = 0; i < 10; i ++) {
+			leftColorAvg += getColorReflected(colorLeft);
+			rightColorAvg += getColorReflected(colorRight);
+	}
+	leftColorAvg /= 10;
+	rightColorAvg /= 10;
+
+	float alpha = 0.5;
+	while (1) {
+		int currLeft = getColorReflected(colorLeft);
+		int currRight = getColorReflected(colorRight);
+		leftColorAvg =  currLeft + alpha * (leftColorAvg - currLeft);
+		rightColorAvg =  currRight + alpha * (rightColorAvg - currRight);
+		displayCenteredBigTextLine(3, "%d / %d ", leftColorAvg, rightColorAvg);
 	}
 }
 
@@ -274,19 +315,21 @@ task detectObject() {
 */
 task main()
 {
-		int whiteCal = 0;
-		int blackCal = 0;
+
+		whiteCal = 0;
+		blackCal = 0;
 		int sampleSize = 10;
-		while (!whiteCal || !blackCal) {
+		while (/*!whiteCal ||*/ !blackCal) {
 			int i = 0;
-			if (getButtonPress(buttonAny) && !whiteCal) {
+			/*if (getButtonPress(buttonAny) && !whiteCal) {
 				setMotorSpeed(motorLeft, 10);
 				setMotorSpeed(motorRight, 10);
 				for (i = 0; i < sampleSize; i++) {
 					sleep(300);
 					whiteCal += (getColorReflected(colorLeft) + getColorReflected(colorRight))/2;
 				}
-			} else if (getButtonPress(buttonAny) && !blackCal) {
+			} else */
+			if (getButtonPress(buttonAny) && !blackCal) {
 				setMotorSpeed(motorLeft, 10);
 				setMotorSpeed(motorRight, 10);
 				for (i = 0; i < sampleSize; i++) {
@@ -297,14 +340,15 @@ task main()
 			setMotorSpeed(motorLeft, 0);
 			setMotorSpeed(motorRight, 0);
 		}
-		whiteCal /= sampleSize;
+		//whiteCal /= sampleSize;
 		blackCal /= sampleSize;
-		threshold = (whiteCal + blackCal) / 2;
+		//threshold = (whiteCal + blackCal) / 2;
 
-		displayCenteredBigTextLine(4, "%d / %d / %d", whiteCal, blackCal, threshold);
+		displayCenteredBigTextLine(4, "%d / %d ", whiteCal, blackCal);
 
 		while (!getButtonPress(buttonAny)){ sleep(100); }
-
+			startTask(calculateColors);
+			sleep(1000);
 	    startTask(wander);
 	    startTask(detectLine);
 	    //startTask(detectObject);
