@@ -10,8 +10,8 @@
 * Team #8:
 * Base Code from: Team #12: Aaron Chau, Brandon Scholer
 */
-#define MOTOR_SPEED_FAST 50
-#define MOTOR_SPEED_NORMAL 40
+#define MOTOR_SPEED_FAST 45
+#define MOTOR_SPEED_NORMAL 35
 #define MIN_DIR_INTERVAL 750
 #define MAX_TURNS 2
 
@@ -105,30 +105,55 @@ void hardLeftTurn()
 void followLine(bool left, bool right) {
 	   //setMotorSpeed(motorLeft, 20);
 	   //setMotorSpeed(motorRight, 20);
+		int runningSpeed = MOTOR_SPEED_NORMAL;
+		int turnFast = MOTOR_SPEED_FAST;
+		int turnSlow = 5;
+
+		clearTimer(T3);
 	   bool online = true;
+	   int escape = 1000;
 		 while (online) {
-			int currLeftRead = 	leftColorAvg;
-			int currRightRead = 	rightColorAvg;
+		   // if black and white then clear
+		   // else dont clear
+		   if (leftColorAvg <= blackCal + 5 || rightColorAvg <= blackCal + 5) {
+		     setLEDColor(ledGreen);
+		     clearTimer(T3);
+		     setMotorSpeed(motorLeft, runningSpeed);
+		     setMotorSpeed(motorRight, runningSpeed);
+		   }
 
-		   setMotorSpeed(motorLeft, 20);
-		   setMotorSpeed(motorRight, 20);
 
-		   //if (online) {//left is on black
-			    while (left ? (blackCal + 5 <= currLeftRead) : (blackCal + 5 >= currRightRead)) {	//while left sees white (and right)
-						currLeftRead = 	leftColorAvg;
-						currRightRead = 	rightColorAvg;
-			    	setMotorSpeed(motorRight, 35);		//turn to the left
-			   		setMotorSpeed(motorLeft, 5);
-			    	// Move until left color sensor does not see white anymore
+				displayCenteredBigTextLine(7, "Time: %d", time1[T3]);
+
+			    while (left ? (blackCal + 5 <= leftColorAvg) : (leftColorAvg <= blackCal + 5)) {	//while left sees white (and right)
+
+			    setLEDColor(ledOrange);
+			    displayCenteredBigTextLine(7, "Time: %d", time1[T3]);
+
+			    	setMotorSpeed(motorRight, turnFast);		//turn to the left
+			   		setMotorSpeed(motorLeft, turnSlow);
+
+			    	if ((leftColorAvg >= blackCal + 5 && rightColorAvg >= blackCal + 5) && time1[T3] > escape){
+			   			online = false;
+			   			break;
+			   		}
 			   	}
-					while (left ? (blackCal + 5 >= currRightRead) : (blackCal + 5 <= currLeftRead)) {	//while right sees black
-						currLeftRead = 	leftColorAvg;
-						currRightRead = 	rightColorAvg;
-			    	setMotorSpeed(motorLeft, 35);	//turn to the right
-			   		setMotorSpeed(motorRight, 5);
+					while (left ? (blackCal + 5 >= rightColorAvg) : (rightColorAvg >= blackCal + 5)) {	//while right sees black
+
+					setLEDColor(ledOrange);
+					displayCenteredBigTextLine(7, "Time: %d", time1[T3]);
+
+			    	setMotorSpeed(motorLeft, turnFast);	//turn to the right
+			   		setMotorSpeed(motorRight, turnSlow);
 			    	// Move until right color sensor does not see black anymore
+			   		if ((leftColorAvg >= blackCal + 5 && rightColorAvg >= blackCal + 5) && time1[T3] > escape){
+			   			online = false;
+			   			break;
+			   		}
 			   	}
-			 //}
+			   //online = !(time1[T3] >= escape);
+
+			   displayCenteredBigTextLine(7, "Time: %d", time1[T3]);
 		}
 }
 
@@ -209,21 +234,21 @@ task detectLine() {
 	bool leftDetect = false;
 	bool rightDetect = false;
 	while (1) {
-			int currLeftRead = 	leftColorAvg;
-			int currRightRead = 	rightColorAvg;
+			//int currLeftRead = 	leftColorAvg;
+			//int currRightRead = 	rightColorAvg;
 
 		//if (SensorValue[colorLeft] == 1) { //black = 1
-		if ((blackCal - 5 <= currLeftRead) &&  (currLeftRead <= blackCal + 5)) { //black = 1
+		if ((blackCal - 5 <= leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) { //black = 1
 		   //online = true;
-			 sleep(500);
-			 if ((blackCal - 5 <= currLeftRead) &&  (currLeftRead <= blackCal + 5)) {
+			 sleep(100);
+			 if ((blackCal - 5 <= leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) {
 		   	leftDetect = true;
 	     	setLEDColor(ledOrange);
 	     	stopTask(wander);
 	    }
-		} else if ((blackCal - 5 <= currRightRead) &&  (currRightRead <= blackCal + 5)) { //black = 1
-		   sleep(500);
-		   if ((blackCal - 5 <= currRightRead) &&  (currRightRead <= blackCal + 5)) { //black = 1
+		} else if ((blackCal - 5 <= rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) { //black = 1
+		   sleep(100);
+		   if ((blackCal - 5 <= rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) { //black = 1
 				rightDetect = true;
 		   	setLEDColor(ledOrange);
 		   	stopTask(wander);
@@ -234,7 +259,11 @@ task detectLine() {
 	     //sleep(1000);
 	     setLEDColor(ledGreen);
 	     followLine(leftDetect, rightDetect);
-	     setLEDColor(ledRed);
+	     //playTone(3000, 10);
+	     playSound(soundBeepBeep);
+	     leftDetect = false;
+	     rightDetect = false;
+			 startTask(wander);
 		}
 	}
 }
@@ -252,13 +281,13 @@ task calculateColors() {
 	leftColorAvg /= 10;
 	rightColorAvg /= 10;
 
-	float alpha = 0.5;
+	float alpha = 0.7;
 	while (1) {
 		int currLeft = getColorReflected(colorLeft);
 		int currRight = getColorReflected(colorRight);
 		leftColorAvg =  currLeft + alpha * (leftColorAvg - currLeft);
 		rightColorAvg =  currRight + alpha * (rightColorAvg - currRight);
-		displayCenteredBigTextLine(3, "%d / %d ", leftColorAvg, rightColorAvg);
+		displayCenteredBigTextLine(1, "%d / %d ", leftColorAvg, rightColorAvg);
 	}
 }
 
@@ -319,6 +348,7 @@ task main()
 		whiteCal = 0;
 		blackCal = 0;
 		int sampleSize = 10;
+
 		while (/*!whiteCal ||*/ !blackCal) {
 			int i = 0;
 			/*if (getButtonPress(buttonAny) && !whiteCal) {
@@ -354,6 +384,7 @@ task main()
 	    //startTask(detectObject);
 
     while(1) {
+    	//displayCenteredBigTextLine(4, "%d", getColorReflected(colorLeft) + getColorReflected(colorRight)/2);
 				wait(10);
   	}
 }
