@@ -97,13 +97,13 @@ void hardLeftTurn()
 void followLine(bool left, bool right) {
     //setMotorSpeed(motorLeft, 20);
     //setMotorSpeed(motorRight, 20);
-    int runningSpeed = MOTOR_SPEED_NORMAL;
-    int turnFast = MOTOR_SPEED_FAST;
+    int runningSpeed = MOTOR_SPEED_NORMAL-10;
+    int turnFast = MOTOR_SPEED_FAST+15;
     int turnSlow = 5;
 
     clearTimer(T3);
     bool online = true;
-    int escape = 750;
+    int escape = 550;
     while (online) {
         // if black and white then clear
         // else dont clear
@@ -143,7 +143,6 @@ void followLine(bool left, bool right) {
                 break;
             }
         }
-        //online = !(time1[T3] >= escape);
 
         displayCenteredBigTextLine(7, "Time: %d", time1[T3]);
     }
@@ -232,14 +231,14 @@ task detectLine() {
         //if (SensorValue[colorLeft] == 1) { //black = 1
         if ((0 < leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) {
             //online = true;
-            sleep(250);
+            sleep(100);
             if ((0 < leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) {
                 leftDetect = true;
                 //setLEDColor(ledOrange);
                 stopTask(wander);
             }
         } else if ((0 < rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) {
-            sleep(250);
+            sleep(100);
             if ((0 < rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) {
                 rightDetect = true;
                 //setLEDColor(ledOrange);
@@ -311,32 +310,11 @@ task calculateAverages() {
 }
 
 task detectObject() {
-    /*
-    int i = 0, avg = 0;
-    for (i = 0; i < 10; i ++) {
-    avg += getUSDistance(S3);
-    }
-    avg = avg/10;
-    //Yt =  Xt  + a ( Yt-1 – Xt)
-    float alpha = 0.7;
-
-
     bool running = true;
     while (1) {
-
-    int i = 0;
-    for ( i = 0; i < 10; i++)	{
-    sleep(10);
-    float currDist = getUSDistance(S3);
-    avg =  currDist + alpha * (avg - currDist);
-    }
-    */
-    //displayCenteredBigTextLine(3, "%d", avg);
-    bool running = true;
-    while (1) {
-        if (sonarAvg <= 4.0) {
+        if (sonarAvg <= 5.0) {
         		sleep(250);
-            if (sonarAvg <= 4.0) {
+            if (sonarAvg <= 5.0) {
 
 	            stopTask(wander);
 	            stopTask(detectLine);
@@ -426,7 +404,7 @@ task main()
     sleep(1000);
     startTask(wander);
     startTask(detectLine);
-    startTask(detectObject);
+    //startTask(detectObject);
 
     while(1) {
         //displayCenteredBigTextLine(4, "%d", getColorReflected(colorLeft) + getColorReflected(colorRight)/2);
