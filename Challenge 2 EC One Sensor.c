@@ -105,7 +105,7 @@ task followLine() {
     clearTimer(T3);
     bool online = true;
     int escape = 575;
-    int offset = 3;
+    int offset = 2;
     while (online) {
     	// -1 * ((.1 * sonarAvg - 10)*(.1 * sonarAvg - 10)) + 100;
 	  	displayCenteredBigTextLine(7, "current: %d", leftColorAvg);
@@ -125,8 +125,8 @@ task followLine() {
             setMotorSpeed(motorRight, runningSpeed*0.7);
             setLEDColor(ledGreen);
             while (leftColorAvg > whiteCal - offset) {
-            	setMotorSpeed(motorLeft, turnFast*0.7);
-            	setMotorSpeed(motorRight, -turnFast*0.7);
+            	setMotorSpeed(motorLeft, runningSpeed*0.7);
+            	setMotorSpeed(motorRight, -runningSpeed*0.7);
           	}
         }
         while (leftColorAvg < grayCal - offset) {	// turn left
@@ -134,8 +134,8 @@ task followLine() {
             setMotorSpeed(motorRight, runningSpeed);
             setLEDColor(ledRed);
             while (leftColorAvg < blackCal + offset) {
-            	setMotorSpeed(motorRight, turnFast*0.7);
-            	setMotorSpeed(motorLeft, -turnFast*0.7);
+            	setMotorSpeed(motorRight, runningSpeed*0.7);
+            	setMotorSpeed(motorLeft, -runningSpeed*0.7);
           	}
         }
     }
