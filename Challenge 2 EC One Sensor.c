@@ -22,120 +22,42 @@ int grayCal;
 int leftColorAvg;
 
 /**
-* Move the robot to the left.
-*/
-void moveLeft(int * motorLeftSpeed, int * motorRightSpeed) {
-    *motorLeftSpeed = MOTOR_SPEED_NORMAL - 5;
-    *motorRightSpeed = MOTOR_SPEED_FAST;
-}
-
-/**
-* Move the robot to the right.
-*/
-void moveRight(int * motorLeftSpeed, int * motorRightSpeed) {
-    *motorLeftSpeed = MOTOR_SPEED_FAST;
-    *motorRightSpeed = MOTOR_SPEED_NORMAL - 5;
-}
-
-/**
-* Return a random time interval between (MIN_DIR_INTERVAL ~ MIN_DIR_INTERVAL+100)
-*/
-int resetMyTimer() {
-    clearTimer(T2);
-    return MIN_DIR_INTERVAL + random(100);
-}
-
-/**
-* Reverse the robot given a duration in milliseconds.
-*/
-void reverseRobot(int timeToReverse) {
-    clearTimer(T1);
-    while(time1[T1] < timeToReverse) {
-        setMotorSpeed(motorLeft, -1 * MOTOR_SPEED_NORMAL);
-        setMotorSpeed(motorRight, -1 * MOTOR_SPEED_NORMAL);
-    }
-    setMotorSpeed(motorLeft, -1 * 0);
-    setMotorSpeed(motorRight, -1 * 0);
-
-}
-
-/**
-*   Function call for when the left bumper is hit.
-*/
-void hardRightTurn()
-{
-    // Gets a random percentage to multiply to the speed.
-    float randomness = random(50);
-    float percent = 1 + randomness/100;
-    clearTimer(T2);
-    while (time1[T2] < 500 + random(250)) {
-        setMotorSpeed(motorLeft, MOTOR_SPEED_NORMAL * percent);
-        setMotorSpeed(motorRight, MOTOR_SPEED_NORMAL * -1 * percent);
-    }
-    setMotorSpeed(motorLeft, 0);
-    setMotorSpeed(motorRight, 0);
-}
-
-/**
-*   Function call for when the right bumper is hit.
-*/
-void hardLeftTurn()
-{
-    // Gets a random percentage to multiply to the speed.
-    float randomness = random(50);
-    float percent = 1 + randomness/100;
-    clearTimer(T2);
-    while (time1[T2] < 500 + random(250)) {
-        setMotorSpeed(motorLeft, MOTOR_SPEED_NORMAL * -1 * percent);
-        setMotorSpeed(motorRight, MOTOR_SPEED_NORMAL * percent);
-    }
-    setMotorSpeed(motorLeft, 0);
-    setMotorSpeed(motorRight, 0);
-}
-
-/**
 * follows the edge of a line
 * param bool left: are we on the left side of a line?
 */
 task followLine() {
-    int runningSpeed = MOTOR_SPEED_NORMAL - 5;
-    int turnFast = MOTOR_SPEED_NORMAL;
-    int turnSlow = 5;
-
+    int runningSpeed = MOTOR_SPEED_NORMAL-5;
     clearTimer(T3);
     bool online = true;
-    int escape = 575;
-    int offset = 2;
+    float offset = 3.0;
+    float smallTurn = 0.3;
+    float bigTurn = 0.5;
     while (online) {
     	// -1 * ((.1 * sonarAvg - 10)*(.1 * sonarAvg - 10)) + 100;
 	  	displayCenteredBigTextLine(7, "current: %d", leftColorAvg);
-        // if black and white then clear
-        // else dont clear
-        while (leftColorAvg < grayCal + offset  && leftColorAvg > grayCal - offset) {
+        while (leftColorAvg <= grayCal + offset  && leftColorAvg >= grayCal - offset) {
             setMotorSpeed(motorLeft, runningSpeed);
             setMotorSpeed(motorRight, runningSpeed);
-
             setLEDColor(ledOff);
         }
 
-
         while (leftColorAvg > grayCal + offset) {	// turn right
-        		//blackCal/leftColorAvg
             setMotorSpeed(motorLeft, runningSpeed);
-            setMotorSpeed(motorRight, runningSpeed*0.7);
-            setLEDColor(ledGreen);
-            while (leftColorAvg > whiteCal - offset) {
-            	setMotorSpeed(motorLeft, runningSpeed*0.7);
-            	setMotorSpeed(motorRight, -runningSpeed*0.7);
+            setMotorSpeed(motorRight, runningSpeed*smallTurn);
+            while (leftColorAvg > whiteCal - offset && leftColorAvg > grayCal + offset) {
+            	setMotorSpeed(motorLeft, runningSpeed*bigTurn);
+            	setMotorSpeed(motorRight, -runningSpeed*bigTurn);
+            	setLEDColor(ledGreen);
           	}
         }
+
         while (leftColorAvg < grayCal - offset) {	// turn left
-            setMotorSpeed(motorLeft, runningSpeed*0.7);
+            setMotorSpeed(motorLeft, runningSpeed*smallTurn);
             setMotorSpeed(motorRight, runningSpeed);
-            setLEDColor(ledRed);
-            while (leftColorAvg < blackCal + offset) {
-            	setMotorSpeed(motorRight, runningSpeed*0.7);
-            	setMotorSpeed(motorLeft, -runningSpeed*0.7);
+            while (leftColorAvg < blackCal + offset && leftColorAvg < grayCal - offset) {
+            	setMotorSpeed(motorRight, runningSpeed*bigTurn);
+            	setMotorSpeed(motorLeft, -runningSpeed*bigTurn);
+            	setLEDColor(ledRed);
           	}
         }
     }
