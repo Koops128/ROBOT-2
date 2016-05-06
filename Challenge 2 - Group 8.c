@@ -146,8 +146,8 @@ void followLine(bool left) {
             	setMotorSpeed(motorLeft, MOTOR_SPEED_FAST*1.5);		//turn to the left
             	setMotorSpeed(motorRight, -10);
             } else {
-            		setMotorSpeed(motorLeft, turnFast);		//turn to the left
-            		setMotorSpeed(motorRight, turnSlow);
+        		setMotorSpeed(motorLeft, turnFast);		//turn to the left
+        		setMotorSpeed(motorRight, turnSlow);
           	}
         }
 
@@ -236,16 +236,18 @@ task detectLine() {
     bool rightDetect = false;
     while (1) {
 
+        // Check if the left sensor detected the black line.
         if ((0 <= leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) {
-
-        		sleep(100);
+            // sleep for a little bit to make sure we actually detected the line.
+        	sleep(100);
             if ((0 <= leftColorAvg) &&  (leftColorAvg <= blackCal + 5)) {
                 leftDetect = true;
                 stopTask(wander);
             }
+        // Check if the right sensor detected the line
         } else if ((0 <= rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) {
-
-        		sleep(100);
+            // sleep for a little bit to make sure we actually detected the line.
+        	sleep(100);
             if ((0 <= rightColorAvg) &&  (rightColorAvg <= blackCal + 5)) {
                 rightDetect = true;
                 stopTask(wander);
@@ -258,6 +260,7 @@ task detectLine() {
 
             clearTimer(T3);
             while (time1[T3] < 750) {
+                // Turn the robot to offset the wide turn from when the robot left followLine
 	            if (leftDetect) {
 	            	setMotorSpeed(motorLeft, MOTOR_SPEED_FAST*1.5);
 	            	setMotorSpeed(motorRight, -5);
@@ -303,6 +306,9 @@ task calculateAverages() {
         int currRight = getColorReflected(colorRight);
         int currSonar = getUSDistance(S3);
 
+        // We use a counter to make sure that we aren't getting weird noise. We have a threshold of 3 readings. 
+        // If we think we have noise, increment the counter. If the counter counts up to 3, we probably have a 
+        // valid reading from the sensors. 
         if (leftColorAvg - currLeft < 20 || leftCount > 3) {
         	leftColorAvg =  currLeft + alpha * (leftColorAvg - currLeft);
         	leftCount = 0;
@@ -320,24 +326,36 @@ task calculateAverages() {
         if (sonarAvg - currSonar < 20 || sonarCount > 3) {
 	        sonarAvg =  currSonar + alpha * (sonarAvg - currSonar);
 	        sonarCount = 0;
-	      } else {
+        } else {
 	      	sonarCount++;
-	    	}
+    	}
     }
 }
 
+
+/**
+* The task that looks for an object. This task is never interrupted. 
+*/
 task detectObject() {
     bool running = true;
     while (1) {
+        // Check if the sonar is 5 cm away.
         if (sonarAvg <= 5.0) {
-        		sleep(250);
+            // Sleep for a little to double check the reading. 
+        	sleep(250);
             if (sonarAvg <= 5.0) {
-
+                // Stop the other lower tier tasks.
 	            stopTask(wander);
 	            stopTask(detectLine);
 	            stopAllMotors();
+
+                // Wait
 	            sleep(2000);
+
+                // Reverse the robot for 3 seconds
 	            reverseRobot(3000);
+
+                // Make a random turn left/right
 	            if (random(1)) {
 	                hardRightTurn();
 	            } else {
@@ -347,7 +365,7 @@ task detectObject() {
 	            running = false;
 	          }
         } else if (sonarAvg <= 92.0) {
-
+            // Make sure that the sonar reading is actually under 92 cm.
             sleep(250);
             if (sonarAvg <= 92.0) {
 
@@ -357,13 +375,15 @@ task detectObject() {
             	setLEDColor(ledOrangePulse);
 
             	running = false;
-            	// -(.1x - 10)^2 + 100
+            	// An exponential equation that uses the sonar reading to decrease the 
+                // speed as the robot gets closer to an object. 
             	int motorSpeed = -1 * ((.1 * sonarAvg - 10)*(.1 * sonarAvg - 10)) + 100;
             	setMotorSpeed(motorLeft, motorSpeed);
             	setMotorSpeed(motorRight, motorSpeed);
             }
         } else {
             if (!running) {
+                // If the robot is done detecting an object then start the wander and line detection again.
                 startTask(wander);
                 startTask(detectLine);
                 setLEDColor(ledGreen);
@@ -388,6 +408,7 @@ task main()
     bool hasCalibrated = false;
     while (/*!whiteCal || !blackCal*/!hasCalibrated) {
         int i = 0;
+        // Code to calibrate the white reading. However, we ended up only using the black calibration color. 
         /*if (getButtonPress(buttonAny) && !whiteCal) {
         setMotorSpeed(motorLeft, 10);
         setMotorSpeed(motorRight, 10);
@@ -396,10 +417,13 @@ task main()
         whiteCal += (getColorReflected(colorLeft) + getColorReflected(colorRight))/2;
         }
         } else */
+        // Press the up button to use a predefined black calibration color.
         if (getButtonPress(buttonUp) && !blackCal) {
             blackCal = 0;
             hasCalibrated = true;
         }
+
+        // Press the middle button to let the robot calibrate the black color.
         if (getButtonPress(buttonEnter) && !blackCal) {
             setMotorSpeed(motorLeft, 10);
             setMotorSpeed(motorRight, 10);
@@ -416,16 +440,19 @@ task main()
     }
 
 
-
+    // Wait for the user to press a button to start the robot.
     while (!getButtonPress(buttonAny)){ sleep(100); }
+
+    // Start calculating our weighted average readings.
     startTask(calculateAverages);
     sleep(1000);
+
+    // Start our tasks.
     startTask(wander);
     startTask(detectLine);
     startTask(detectObject);
 
     while(1) {
-        //displayCenteredBigTextLine(4, "%d", getColorReflected(colorLeft) + getColorReflected(colorRight)/2);
         wait(10);
     }
 }
